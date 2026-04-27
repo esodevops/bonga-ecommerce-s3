@@ -30,6 +30,9 @@ mkdir -p "$DATA_DIR"
 fetch_from_s3() {
   local bucket="$1"
   local prefix="${2:-.}"
+  local normalized_prefix="${prefix%/}"
+  local downloaded_count=0
+  local required_files=("products.csv" "customers.csv" "orders.csv" "orderitems.csv")
   
   if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]] || [[ -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
     echo "[ERROR] AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be set for S3 access"
@@ -49,13 +52,31 @@ fetch_from_s3() {
   export AWS_SECRET_ACCESS_KEY
   export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
   
-  # Sync S3 bucket to local directory
-  aws s3 sync "s3://$bucket/$prefix" "$DATA_DIR/" \
+  # Preferred path: sync CSV files. This requires s3:ListBucket on the bucket.
+  if aws s3 sync "s3://$bucket/$normalized_prefix" "$DATA_DIR/" \
     --include "*.csv" \
     --exclude "*" \
-    --no-progress
-  
-  echo "[DONE] S3 data fetch completed"
+    --no-progress; then
+    echo "[DONE] S3 data fetch completed via sync"
+    return 0
+  fi
+
+  # Fallback path: direct object downloads (works with s3:GetObject only).
+  echo "[WARN] S3 sync failed (likely missing s3:ListBucket). Trying direct object downloads..."
+  for file in "${required_files[@]}"; do
+    if aws s3 cp "s3://$bucket/$normalized_prefix/$file" "$DATA_DIR/$file" --no-progress; then
+      downloaded_count=$((downloaded_count + 1))
+    else
+      echo "[WARN] Could not download s3://$bucket/$normalized_prefix/$file"
+    fi
+  done
+
+  if [[ $downloaded_count -eq 0 ]]; then
+    echo "[ERROR] No CSV files downloaded from S3. Check bucket path and IAM permissions."
+    return 1
+  fi
+
+  echo "[DONE] S3 data fetch completed via direct object downloads ($downloaded_count files)"
 }
 
 # ============================================================================
