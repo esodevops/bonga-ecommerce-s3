@@ -53,9 +53,7 @@ jobs:
           # Skip if using demo data from repo
           if [[ "$STORAGE_TYPE" != "" ]]; then
             echo "[INFO] Fetching data from cloud storage..."
-            if ! bash scripts/fetch_data_from_storage.sh; then
-              echo "[WARN] Cloud fetch failed. Falling back to demo data in data/raw/."
-            fi
+            bash scripts/fetch_data_from_storage.sh
           else
             echo "[INFO] Using demo data from repository"
           fi
