@@ -1,0 +1,80 @@
+name: Bonga Data Load Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  load-and-validate:
+    runs-on: ubuntu-latest
+    env:
+      CI_POSTGRES_DB: ${{ secrets.CI_POSTGRES_DB }}
+      CI_POSTGRES_USER: ${{ secrets.CI_POSTGRES_USER }}
+      CI_POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ${{ secrets.CI_POSTGRES_DB }}
+          POSTGRES_USER: ${{ secrets.CI_POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.CI_POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h localhost -p 5432" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Fetch private data from cloud storage
+        env:
+          STORAGE_TYPE: ${{ secrets.STORAGE_TYPE }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET }}
+          S3_PREFIX: ${{ secrets.S3_PREFIX }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+          AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          STORAGE_URL: ${{ secrets.STORAGE_URL }}
+        run: |
+          # Skip if using demo data from repo
+          if [[ "$STORAGE_TYPE" != "" ]]; then
+            echo "[INFO] Fetching data from cloud storage..."
+            bash scripts/fetch_data_from_storage.sh
+          else
+            echo "[INFO] Using demo data from repository"
+          fi
+
+      - name: Create schema
+        env:
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+        run: |
+          psql -h localhost -U "$CI_POSTGRES_USER" -d "$CI_POSTGRES_DB" \
+            -f sql/01_schema.sql
+
+      - name: Load CSV datasets
+        env:
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+        run: |
+          psql -h localhost -U "$CI_POSTGRES_USER" -d "$CI_POSTGRES_DB" \
+            -f sql/02_load_data.sql
+
+      - name: Validate row counts and relationships
+        env:
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+        run: |
+          psql -h localhost -U "$CI_POSTGRES_USER" -d "$CI_POSTGRES_DB" \
+            -f sql/03_validate.sql

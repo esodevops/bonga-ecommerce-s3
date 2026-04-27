@@ -1,0 +1,64 @@
+.env
+.env.dev
+.env.production
+.DS_Store
+NOTE.md 
+
+# ==============================
+# Private/Sensitive Data & Paths
+# ==============================
+# Keep demo seed data in data/raw tracked; ignore private datasets.
+data/private/
+data/secret/
+data/staging/
+
+# Cloud storage credentials and configs
+.env.storage
+.env.storage.dev
+.env.storage.production
+cloud-credentials/
+
+# Database dumps and backups
+*.sql.bak
+*.dump
+pg_backup/
+
+# Temporary pipeline artifacts
+.pipeline-cache/
+temp_downloads/
+
+# ==============================
+# Redundant/Obsolete Files
+# ==============================
+# Cloud storage config now embedded in .env files
+.env.storage.example
+
+# ==============================
+# IDE & Editor Files
+# ==============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.tmp
+CLOUD_STORAGE_IMPLEMENTATION.md
+# ==============================
+# OS-specific Files
+# ==============================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+desktop.ini
+
+# ==============================
+# Node/Python/Build Artifacts
+# ==============================
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/
+*.egg-info/
