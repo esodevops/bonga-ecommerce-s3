@@ -1,4 +1,4 @@
-[![Bonga Data Load Pipeline](https://github.com/esodevops/bonga-ecommerce/actions/workflows/load-data-pipeline.yml/badge.svg)](https://github.com/esodevops/bonga-ecommerce/actions/workflows/load-data-pipeline.yml)
+[![Bonga Data Load Pipeline](https://github.com/esodevops/bonga-ecommerce-s3/actions/workflows/load-data-pipeline.yml/badge.svg)](https://github.com/esodevops/bonga-ecommerce-s3/actions/workflows/load-data-pipeline.yml)
 
 # Bonga Ecommerce Data Pipeline
 
